@@ -52,7 +52,7 @@ class Example(QMainWindow):
             topToolbar = self.addToolBar(section)
             for option in self.config_menus.options(section):
                 menuLabel = self.config_menus.get(section, option)
-                self.menus[option] = QAction(QIcon('%s.png' % option), menuLabel, self)
+                self.menus[option] = QAction(QIcon('images/%s.png' % option), menuLabel, self)
                 self.menus[option].setShortcut('Ctrl+Q')
                 self.menus[option].setStatusTip(option)
                 self.menus[option].triggered.connect(lambda checked, tag=option:self.do_clickEvent(checked,tag))                
@@ -62,7 +62,7 @@ class Example(QMainWindow):
         self.statusBar()      
         self.setGeometry(100,100,400,400)
         self.setWindowTitle('PyAudio-Talkie Synthesis')    
-        self.setWindowIcon(QIcon('convert.png')) 
+        self.setWindowIcon(QIcon('images/convert.png')) 
         self.show()
         pass
 
