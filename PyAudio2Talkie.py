@@ -18,21 +18,27 @@ from shutil import copyfile
 
 class ConvertAudio(QThread):
     sec_signal = pyqtSignal(str)
-    def __init__(self, parent=None, audio_file ='', wav_file=''):
+
+    def __init__(self, parent=None, audio_file='', wav_file=''):
         super(ConvertAudio, self).__init__(parent)
         self.current_time = 0
         self.audio_file = audio_file
-        self.wav_file = wav_file
-    
+        self.wav_file = wav_file[:-4]
+
+        self.is_version3 = False
+        if (sys.version_info > (3, 0)):
+            # Python 3 code in this block
+            self.is_version3 = True
+
     def __del__(self):
         self.wait()
 
     def run(self):
-        #this is a special fxn that's called with the start() fxn       
+        # this is a special fxn that's called with the start() fxn
         if os.path.isfile(self.audio_file):
             f = open(self.audio_file, "rb")
             # start of code variable declaration based from audio filename
-            code = "const uint8_t sp" + self.wav_file[:-4]+"[] PROGMEM ={"
+            code = "const uint8_t sp" + self.wav_file+"[] PROGMEM ={"
             try:
                 byte = f.read(1)
                 while byte != "":
@@ -46,19 +52,20 @@ class ConvertAudio(QThread):
                         #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
                         code = ("%s0x%s," % (code, (binascii.hexlify(byte))))
                     time.sleep(1)
-                    self.sec_signal.emit(code) #display code to text area
+                    self.sec_signal.emit(code)  # display code to text area
             except Exception as ex:
-                self.sec_signal.emit(str(ex)) #display code to text area
+                self.sec_signal.emit(str(ex))  # display code to text area
                 print(ex)
             finally:
                 f.close()
                 code = code[:-4]
                 code = code + "};"
-                print(code)                
-                self.sec_signal.emit(code) #display code to text area
+                print(code)
+                self.sec_signal.emit(code)  # display code to text area
                 print
-                print("voice.say(sp"+self.wav_file[:-4]+");")
+                print("voice.say(sp"+self.wav_file+");")
         pass
+
 
 class PyTalkieWindow(QMainWindow):
 
@@ -69,24 +76,34 @@ class PyTalkieWindow(QMainWindow):
         self.init_config()
         self.init_vars()
         self.init_ui()
-        # self.initUI()
 
     def init_config(self):
+        self.config_global = configparser.ConfigParser()
         self.config_menus = configparser.ConfigParser()
         self.config_tools = configparser.ConfigParser()
         self.dir_name = os.path.dirname(os.path.realpath(__file__))
         self.menu_file = os.path.join(self.dir_name, "configs/menus.ini")
         self.tool_file = os.path.join(self.dir_name, "configs/toolbars.ini")
+        self.global_file = os.path.join(self.dir_name, "configs/global.ini")
+
+    def save_config(self):
+        self.config_global.set('global', 'width', str(self.frameGeometry().width()))
+        self.config_global.set('global', 'height', str(self.frameGeometry().height()))
+        self.config_global.set('global', 'init_dir', self.lastOpenedFolder)
+        self.config_global.set('global', 'wav_file', self.new_wavFilename)
+        #self.config_global.set('global', 'geometry', str(self.screenGeometry()))
+        # Writing our configuration file
+        with open(self.global_file, 'w') as configfile:
+            self.config_global.write(configfile)
+        pass
 
     def init_vars(self):
         self.is_loading = False
-        self.is_version3 = False
         self.lastOpenedFolder = "C:\\"
         self.new_wavFilename = ''
         self.wavFile = ''
-        if (sys.version_info > (3, 0)):
-            # Python 3 code in this block
-            self.is_version3 = True
+        self.geometry = ''
+        
 
     def init_ui(self):
         self.textEdit = QTextEdit()
@@ -100,10 +117,11 @@ class PyTalkieWindow(QMainWindow):
         self.config_menus.read(self.menu_file)
         menubar = self.menuBar()
         for section in self.config_menus.sections():
-            topMenu = menubar.addMenu(section)           
+            topMenu = menubar.addMenu(section)
             for option in self.config_menus.options(section):
                 menuLabel = self.config_menus.get(section, option)
-                self.menus[option] = QAction(QIcon('images/%s.png' % option), menuLabel, self)
+                self.menus[option] = QAction(
+                    QIcon('images/%s.png' % option), menuLabel, self)
                 # self.menus[option].setShortcut('Ctrl+Q')
                 self.menus[option].setStatusTip(menuLabel)
                 self.menus[option].triggered.connect(
@@ -116,20 +134,28 @@ class PyTalkieWindow(QMainWindow):
             topToolbar = self.addToolBar(section)
             for option in self.config_tools.options(section):
                 toolLabel = self.config_tools.get(section, option)
-                self.toolbars[option] = QAction(QIcon('images/%s.png' % option), toolLabel, self)
+                self.toolbars[option] = QAction(
+                    QIcon('images/%s.png' % option), toolLabel, self)
                 # self.menus[option].setShortcut('Ctrl+Q')
                 self.toolbars[option].setStatusTip(toolLabel)
                 self.toolbars[option].triggered.connect(
                     lambda checked, tag=option: self.do_clickEvent(checked, tag))
                 topToolbar.addAction(self.toolbars[option])
+        
+        self.config_global.read(self.global_file)
+        self.lastOpenedFolder = self.config_global.get('global', 'init_dir')
+        self.new_wavFilename = self.config_global.get('global', 'wav_file')
+        self.width = self.config_global.get('global', 'width')
+        self.height = self.config_global.get('global', 'height')
+        self.geometry = self.config_global.get('global', 'geometry')
+        
 
         self.statusBar()
-        self.setGeometry(100, 100, 500, 400)
+        self.setGeometry(100, 100, int(self.width), int(self.height))
         self.setWindowTitle('PyAudio-Talkie Synthesis')
         self.setWindowIcon(QIcon('images/convert.png'))
         self.show()
 
-        self.statusBar().showMessage(os.path.join(self.dir_name, "alert.wav"))
         pass
 
     def get_audioName(self, filename):
@@ -147,17 +173,18 @@ class PyTalkieWindow(QMainWindow):
             pass
         elif tag == 'save':
             pass
-        elif tag=='about':
+        elif tag == 'about':
             self.about()
             pass
-        elif tag=='qt':
+        elif tag == 'qt':
             QApplication.instance().aboutQt()
             pass
         else:
-            print(tag)            
+            print(tag)
         pass
 
     def closeEvent(self, event):
+        self.save_config()
         reply = QMessageBox.question(self, 'Message',
                                      "Are you sure to quit without Saving?", QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
@@ -173,9 +200,12 @@ class PyTalkieWindow(QMainWindow):
         # change the cursor
         QApplication.setOverrideCursor(Qt.WaitCursor)
         self.is_loading = True
-        self._converter = ConvertAudio(audio_file=self.new_wavFilename,wav_file=self.wavFile)
+        self._converter = ConvertAudio(
+            audio_file=self.new_wavFilename, wav_file=self.wavFile)
         self._converter.sec_signal.connect(self.textEdit.setText)
         self._converter.start()
+        self._converter.wait()
+        QApplication.restoreOverrideCursor()
 
     def convert_completed(self):
         if self.thread.is_alive():
@@ -215,12 +245,12 @@ class PyTalkieWindow(QMainWindow):
 
     def about(self):
         QMessageBox.about(self, "PyAudio-Talkie Synthesis",
-                "<b>PyAudio-Talkie Synthesis</b><br>"
-                "Version: <b>1.0</b><br><br>"
-                "Copyright  © <b> Tarsier 2018</b><br><br>"
-                "GUI based ( of <b>ArduinoTalkieSpeech-Py</b>) that convert audio <br>"
-                "file (WAV) to <b>Talkie</b> (speech synthesis for arduino) <br>"
-                "compatible data.")
+                          "<b>PyAudio-Talkie Synthesis</b><br>"
+                          "Version: <b>1.0</b><br><br>"
+                          "Copyright  © <b> Tarsier 2018</b><br><br>"
+                          "GUI based ( of <b>ArduinoTalkieSpeech-Py</b>) that convert audio <br>"
+                          "file (WAV) to <b>Talkie</b> (speech synthesis for arduino) <br>"
+                          "compatible data.")
 
 
 if __name__ == '__main__':
