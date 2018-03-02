@@ -1,4 +1,4 @@
-# PyAudio2Talkie
+# PyAudio2Talkie [*Unfinished*]
 
 GUI based ( of [**ArduinoTalkieSpeech-Py**](https://github.com/Tarsier-Marianz/ArduinoTalkieSpeech-Py)) that convert audio file (`WAV`) to Talkie (speech synthesis for arduino) compatible data.
 
