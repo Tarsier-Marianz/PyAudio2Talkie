@@ -523,7 +523,7 @@ class PyTalkieWindow(QMainWindow):
     def about(self):
         QMessageBox.about(self, "PyAudio-Talkie Synthesis",
                           "<b>PyAudio-Talkie Synthesis</b><br>"
-                          "Version: <b>1.0</b><br><br>"
+                          "Version: <b>1.0.5801.98001</b><br><br>"
                           "Copyright  © <b> Tarsier 2018</b><br><br>"
                           "GUI based ( of <b>ArduinoTalkieSpeech-Py</b>) that convert audio <br>"
                           "file (WAV) to <b>Talkie</b> (speech synthesis for arduino) <br>"
