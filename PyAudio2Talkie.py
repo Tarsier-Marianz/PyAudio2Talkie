@@ -418,6 +418,9 @@ class PyTalkieWindow(QMainWindow):
         elif tag == 'about':
             self.about()
             pass
+        elif tag == 'exit':
+            self.close()
+            pass
         elif tag == 'qt':
             QApplication.instance().aboutQt()
             pass
@@ -428,7 +431,7 @@ class PyTalkieWindow(QMainWindow):
     def closeEvent(self, event):
         self.save_config()
         reply = QMessageBox.question(self, 'Exit',
-                                     "Are you sure to quit without Saving?", QMessageBox.Yes |
+                                     "Are you sure to quit?", QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.statusBar().showMessage('Quiting...')
@@ -436,7 +439,7 @@ class PyTalkieWindow(QMainWindow):
         else:
             event.ignore()
             #self.save()
-            event.accept()
+            #event.accept()
 
     def start_convert(self):
         if os.path.isfile(self.new_wavFilename):
