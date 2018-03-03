@@ -126,6 +126,7 @@ class OptionDialog(QDialog):
         layout = QHBoxLayout()
 
         self.originalPalette = QApplication.palette()
+        print (self.originalPalette)
 
         styleComboBox = QComboBox()
         styleComboBox.addItems(QStyleFactory.keys())
@@ -178,8 +179,9 @@ class OptionDialog(QDialog):
 
     def changeStyle(self, styleName):
         self.theme = styleName
+        print (self.theme)
         self.save_config()
-        QApplication.setStyle(QStyleFactory.create(styleName))
+        QApplication.setStyle(QStyleFactory.create(self.theme))
         QApplication.setPalette(self.originalPalette)
         
     def save_config(self):        
@@ -325,7 +327,7 @@ class PyTalkieWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
-            self.save()
+            #self.save()
             event.accept()
 
     def start_convert(self):
@@ -368,9 +370,10 @@ class PyTalkieWindow(QMainWindow):
         fname = QFileDialog.getSaveFileName(self, 'Save File')
         data = self.textEdit.toPlainText()
 
-        file = open(fname[0], 'w')
-        file.write(data)
-        file.close()
+        if os.path.isfile(fname[0]):
+            file = open(fname[0], 'w')
+            file.write(data)
+            file.close()
 
     def copy(self):
         cursor = self.textEdit.textCursor()
@@ -378,28 +381,7 @@ class PyTalkieWindow(QMainWindow):
         self.copiedtext = textSelected
 
     def option_dialog(self):
-        '''
-        opt_dialog = QDialog()
-        self.config_opts.read(self.opts_file)
-        index = 10
-        for section in self.config_opts.sections():
-            for option in self.config_opts.options(section):
-                label_caption = self.config_opts.get(section, option).split('#')
-                cb = QCheckBox(label_caption[0], opt_dialog)
-                cb.move(index*2, index*2)
-                cb.toggle()
-                cb.stateChanged.connect(self.changeTitle)
-                label = QLabel(label_caption[1], opt_dialog)
-                label.move((index*2)+20,(index*2)+20)
-                label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                label.setAlignment(Qt.AlignCenter)
-                label.setStyleSheet("QLabel {color: grey;}")
-        '''
-
-        #b1 = QPushButton("ok", opt_dialog)
-        #b1.move(50, 50)
         opt_dialog = OptionDialog()
-        #opt_dialog.setGeometry(200, 200, 400, 200)
         opt_dialog.setWindowModality(Qt.ApplicationModal)
         opt_dialog.exec_()
 
