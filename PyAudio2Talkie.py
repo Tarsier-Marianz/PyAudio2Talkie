@@ -482,20 +482,21 @@ class PyTalkieWindow(QMainWindow):
             self.set_details(fullfilename)
            
     def set_details(self, full_filename):
-        folder, filename = os.path.split(full_filename)
-        file_details = "[Source Details]\n Size: %s\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
-        file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion"
-        self.textEdit.setText(file_details)
+        if os.path.isfile(full_filename):
+            folder, filename = os.path.split(full_filename)
+            file_details = "[Source Details]\n Size: %s\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
+            file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion"
+            self.textEdit.setText(file_details)
 
     def save(self):
         data = self.textEdit.toPlainText()
         if data.strip():
             self.statusBar().showMessage('Add extension to file name')
             fname = QFileDialog.getSaveFileName(self, 'Save File', self.lastOpenedFolder,"All Files (*);;Text Files (*.txt);;Arduino Sketch (*.ino)")
-            
-            file = open(fname[0], 'w')
-            file.write(data)
-            file.close()
+            if fname and os.path.isfile(fname[0]):
+                file = open(fname[0], 'w')
+                file.write(data)
+                file.close()
 
     def copy(self):
         self.copiedtext = self.textEdit.toPlainText()
@@ -528,7 +529,7 @@ class PyTalkieWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    
+    '''
     #Dark Fusion Theme
     app.setStyle('Fusion')
     palette = QPalette()
@@ -546,6 +547,6 @@ if __name__ == '__main__':
     palette.setColor(QPalette.Highlight, QColor(142,45,197).lighter())
     palette.setColor(QPalette.HighlightedText, Qt.black)
     app.setPalette(palette)
-    
+    '''
     pywin = PyTalkieWindow()
     sys.exit(app.exec_())

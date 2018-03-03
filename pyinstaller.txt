@@ -1,0 +1,1 @@
+pyinstaller --onefile  --windowed --noconsole  --icon=py2talkie.ico --clean -F PyAudio2Talkie.py
