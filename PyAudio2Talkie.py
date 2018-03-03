@@ -75,7 +75,7 @@ class ConvertAudio(QThread):
                 code = code[:-1]
                 final_code = self.get_output( code )
 
-                print(final_code)
+                #print(final_code)
                 self.sec_signal.emit(final_code)  # display code to text area               
         pass
 
@@ -528,7 +528,7 @@ class PyTalkieWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    '''
+    
     #Dark Fusion Theme
     app.setStyle('Fusion')
     palette = QPalette()
@@ -546,6 +546,6 @@ if __name__ == '__main__':
     palette.setColor(QPalette.Highlight, QColor(142,45,197).lighter())
     palette.setColor(QPalette.HighlightedText, Qt.black)
     app.setPalette(palette)
-    '''
+    
     pywin = PyTalkieWindow()
     sys.exit(app.exec_())
