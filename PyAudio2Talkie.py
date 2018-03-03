@@ -41,13 +41,10 @@ class ConvertAudio(QThread):
             # start of code variable declaration based from audio filename
             start_code = "const uint8_t sp" + self.wav_file+"[] PROGMEM = {\n"
             end_code = "\n};"
-            self.code_list = []
-            cl_index = 0
             code = ''
             try:
                 # display code to text area
                 self.sec_signal.emit(str(start_code))
-                index = 0
                 with open(self.audio_file, "rb") as f:
                     while True:
                         byte = f.read(1)
@@ -61,8 +58,6 @@ class ConvertAudio(QThread):
                             #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
                             code = ("%s0x%s," %
                                     (code, (binascii.hexlify(byte))))
-                        if index > 0 and (index % 100 == 0):
-                            code = code + "\r\n"
                     time.sleep(1)
                     self.sec_signal.emit(code)  # display code to text area
 
@@ -80,12 +75,89 @@ class ConvertAudio(QThread):
                 print("voice.say(sp"+self.wav_file+");")
         pass
 
+class Highlighter(QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super(Highlighter, self).__init__(parent)
+
+        keywordFormat = QTextCharFormat()
+        keywordFormat.setForeground(Qt.darkBlue)
+        keywordFormat.setFontWeight(QFont.Bold)
+
+        keywordPatterns = ["\\bchar\\b", "\\bclass\\b", "\\bconst\\b",
+                "\\bdouble\\b", "\\benum\\b", "\\bexplicit\\b", "\\bfriend\\b",
+                "\\binline\\b", "\\bint\\b", "\\blong\\b", "\\bnamespace\\b",
+                "\\boperator\\b", "\\bprivate\\b", "\\bprotected\\b",
+                "\\bpublic\\b", "\\bshort\\b", "\\bsignals\\b", "\\bsigned\\b",
+                "\\bslots\\b", "\\bstatic\\b", "\\bstruct\\b",
+                "\\btemplate\\b", "\\btypedef\\b", "\\btypename\\b",
+                "\\bunion\\b", "\\bunsigned\\b", "\\bvirtual\\b", "\\bvoid\\b",
+                "\\bvolatile\\b"]
+
+        self.highlightingRules = [(QRegExp(pattern), keywordFormat)
+                for pattern in keywordPatterns]
+
+        classFormat = QTextCharFormat()
+        classFormat.setFontWeight(QFont.Bold)
+        classFormat.setForeground(Qt.darkMagenta)
+        self.highlightingRules.append((QRegExp("\\bQ[A-Za-z]+\\b"),
+                classFormat))
+
+        singleLineCommentFormat = QTextCharFormat()
+        singleLineCommentFormat.setForeground(Qt.red)
+        self.highlightingRules.append((QRegExp("//[^\n]*"),
+                singleLineCommentFormat))
+
+        self.multiLineCommentFormat = QTextCharFormat()
+        self.multiLineCommentFormat.setForeground(Qt.red)
+
+        quotationFormat = QTextCharFormat()
+        quotationFormat.setForeground(Qt.darkGreen)
+        self.highlightingRules.append((QRegExp("\".*\""), quotationFormat))
+
+        functionFormat = QTextCharFormat()
+        functionFormat.setFontItalic(True)
+        functionFormat.setForeground(Qt.blue)
+        self.highlightingRules.append((QRegExp("\\b[A-Za-z0-9_]+(?=\\()"),
+                functionFormat))
+
+        self.commentStartExpression = QRegExp("/\\*")
+        self.commentEndExpression = QRegExp("\\*/")
+
+    def highlightBlock(self, text):
+        for pattern, format in self.highlightingRules:
+            expression = QRegExp(pattern)
+            index = expression.indexIn(text)
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+
+        self.setCurrentBlockState(0)
+
+        startIndex = 0
+        if self.previousBlockState() != 1:
+            startIndex = self.commentStartExpression.indexIn(text)
+
+        while startIndex >= 0:
+            endIndex = self.commentEndExpression.indexIn(text, startIndex)
+
+            if endIndex == -1:
+                self.setCurrentBlockState(1)
+                commentLength = len(text) - startIndex
+            else:
+                commentLength = endIndex - startIndex + self.commentEndExpression.matchedLength()
+
+            self.setFormat(startIndex, commentLength,
+                    self.multiLineCommentFormat)
+            startIndex = self.commentStartExpression.indexIn(text,
+                    startIndex + commentLength)
+
 
 class OptionDialog(QDialog):
     NumGridRows = 3
     NumButtons = 4
 
-    def __init__(self):
+    def __init__(self, parent):
         super(OptionDialog, self).__init__()
 
         self.config_global = configparser.ConfigParser()      
@@ -303,9 +375,13 @@ class PyTalkieWindow(QMainWindow):
             self.start_convert()
             pass
         elif tag == 'save':
+            self.save()
             pass
         elif tag == 'option':
             self.option_dialog()
+            pass
+        elif tag=='copy':
+            self.copy()
             pass
         elif tag == 'about':
             self.about()
@@ -364,21 +440,26 @@ class PyTalkieWindow(QMainWindow):
             self.wavFile = self.get_audioName(filename)
             self.statusBar().showMessage(self.new_wavFilename)
             copyfile(fname[0], self.new_wavFilename)
+            file_details = "[Source Details]\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (filename, self.wavFile, folder,fname[0])
+            file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino..."
+            self.textEdit.setText(file_details)
 
     def save(self):
-        self.statusBar().showMessage('Add extension to file name')
-        fname = QFileDialog.getSaveFileName(self, 'Save File')
         data = self.textEdit.toPlainText()
-
-        if os.path.isfile(fname[0]):
+        if data.strip():
+            self.statusBar().showMessage('Add extension to file name')
+            fname = QFileDialog.getSaveFileName(self, 'Save File', self.lastOpenedFolder,"All Files (*);;Text Files (*.txt);;Arduino Sketch (*.ino)")
+            
             file = open(fname[0], 'w')
             file.write(data)
             file.close()
 
     def copy(self):
-        cursor = self.textEdit.textCursor()
-        textSelected = cursor.selectedText()
-        self.copiedtext = textSelected
+        self.copiedtext = self.textEdit.toPlainText()
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.copiedtext , mode=clipboard.Clipboard)
+        event = QEvent(QEvent.Clipboard)
+        QApplication.sendEvent(clipboard, event)
 
     def option_dialog(self):
         opt_dialog = OptionDialog()
