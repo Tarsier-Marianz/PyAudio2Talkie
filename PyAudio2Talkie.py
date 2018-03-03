@@ -37,7 +37,7 @@ class ConvertAudio(QThread):
 
     def run(self):
         # this is a special fxn that's called with the start() fxn
-        if os.path.isfile(self.audio_file):           
+        if os.path.isfile(self.audio_file):
             # start of code variable declaration based from audio filename
             start_code = "const uint8_t sp" + self.wav_file+"[] PROGMEM = {\n"
             end_code = "\n};"
@@ -45,7 +45,8 @@ class ConvertAudio(QThread):
             cl_index = 0
             code = ''
             try:
-                self.sec_signal.emit(str(start_code))  # display code to text area
+                # display code to text area
+                self.sec_signal.emit(str(start_code))
                 index = 0
                 with open(self.audio_file, "rb") as f:
                     while True:
@@ -54,28 +55,106 @@ class ConvertAudio(QThread):
                             break
                         if self.is_version3:
                             #print ("%s0x%s," % ( code,(binascii.hexlify(byte)).decode("ascii").upper()))
-                            code = ("%s0x%s," % (code, (binascii.hexlify(byte)).decode("ascii").upper()))
+                            code = ("%s0x%s," % (
+                                code, (binascii.hexlify(byte)).decode("ascii").upper()))
                         else:
                             #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
-                            code = ("%s0x%s," % (code, (binascii.hexlify(byte))))
+                            code = ("%s0x%s," %
+                                    (code, (binascii.hexlify(byte))))
                         if index > 0 and (index % 100 == 0):
-                            code = code +"\r\n"
+                            code = code + "\r\n"
                     time.sleep(1)
                     self.sec_signal.emit(code)  # display code to text area
-                    
+
             except Exception as ex:
                 self.sec_signal.emit(str(ex))  # display code to text area
                 print(ex)
             finally:
                 f.close()
-                code = code[:-1]              
+                code = code[:-1]
                 final_code = start_code + code + end_code
-                
+
                 print(final_code)
                 self.sec_signal.emit(final_code)  # display code to text area
                 print
                 print("voice.say(sp"+self.wav_file+");")
         pass
+
+
+class OptionDialog(QDialog):
+    NumGridRows = 3
+    NumButtons = 4
+
+    def __init__(self):
+        super(OptionDialog, self).__init__()
+
+        self.createThemesGroupBox()
+        self.createFormGroupBox()
+        self.createGridGroupBox()
+
+
+        buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.horizontalGroupBox)
+        mainLayout.addWidget(self.formGroupBox)
+        mainLayout.addWidget(self.gridGroupBox)
+        mainLayout.addWidget(buttonBox)
+        self.setLayout(mainLayout)
+
+        self.setWindowTitle("Options")
+        self.setWindowIcon(QIcon('images/convert.png'))
+
+
+    def createThemesGroupBox(self):
+        self.horizontalGroupBox = QGroupBox("Themes")
+        layout = QHBoxLayout()
+
+        for i in range(OptionDialog.NumButtons):
+            button = QPushButton("Button %d" % (i + 1))
+            layout.addWidget(button)
+
+        self.horizontalGroupBox.setLayout(layout)
+
+    def createGridGroupBox(self):
+        self.gridGroupBox = QGroupBox("Ouput Preview")
+        layout = QGridLayout()
+
+        
+        self.smallEditor = QTextEdit()
+        self.smallEditor.setPlainText("This widget takes up about two thirds "
+                                      "of the grid layout.")
+
+        layout.addWidget(self.smallEditor, 0, 2, 4, 1)
+
+        #layout.setColumnStretch(1, 10)
+        #layout.setColumnStretch(2, 20)
+        self.gridGroupBox.setLayout(layout)
+
+    def createFormGroupBox(self):
+        self.formGroupBox = QGroupBox("Output")
+        layout = QFormLayout()
+        self.cb = QComboBox()
+        self.cb.addItem("Arduino Syntax -Full")
+        self.cb.addItem("Arduino Syntax -Declaration")
+        self.cb.addItem("Plain Bytes")
+        self.cb.currentIndexChanged.connect(self.selectionchange)
+        layout.addRow(QLabel("Formatting: "), self.cb)
+        self.formGroupBox.setLayout(layout)
+
+    def selectionchange(self,i):
+        self.dir_name = os.path.dirname(os.path.realpath(__file__))
+        self.opts_preview = os.path.join(self.dir_name, "configs","preview")
+        self.opts_file = os.path.join(self.opts_preview, ("%s.txt" %i))
+        if os.path.isfile(self.opts_file):
+            f = open(self.opts_file, 'r')
+            with f:
+                data = f.read()
+                self.smallEditor.setText(data)
 
 
 class PyTalkieWindow(QMainWindow):
@@ -89,10 +168,12 @@ class PyTalkieWindow(QMainWindow):
         self.init_ui()
 
     def init_config(self):
+        self.config_opts = configparser.ConfigParser()
         self.config_global = configparser.ConfigParser()
         self.config_menus = configparser.ConfigParser()
         self.config_tools = configparser.ConfigParser()
         self.dir_name = os.path.dirname(os.path.realpath(__file__))
+        self.opts_file = os.path.join(self.dir_name, "configs/options.ini")
         self.menu_file = os.path.join(self.dir_name, "configs/menus.ini")
         self.tool_file = os.path.join(self.dir_name, "configs/toolbars.ini")
         self.global_file = os.path.join(self.dir_name, "configs/global.ini")
@@ -261,19 +342,32 @@ class PyTalkieWindow(QMainWindow):
         self.copiedtext = textSelected
 
     def option_dialog(self):
+        '''
         opt_dialog = QDialog()
-        cb = QCheckBox('Show title', opt_dialog)
-        cb.move(20, 20)
-        cb.toggle()
-        cb.stateChanged.connect(self.changeTitle)
+        self.config_opts.read(self.opts_file)
+        index = 10
+        for section in self.config_opts.sections():
+            for option in self.config_opts.options(section):
+                label_caption = self.config_opts.get(section, option).split('#')
+                cb = QCheckBox(label_caption[0], opt_dialog)
+                cb.move(index*2, index*2)
+                cb.toggle()
+                cb.stateChanged.connect(self.changeTitle)
+                label = QLabel(label_caption[1], opt_dialog)
+                label.move((index*2)+20,(index*2)+20)
+                label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                label.setAlignment(Qt.AlignCenter)
+                label.setStyleSheet("QLabel {color: grey;}")
+        '''
 
-        b1 = QPushButton("ok", opt_dialog)
-        b1.move(50, 50)
-        opt_dialog.setWindowTitle("Option")
+        #b1 = QPushButton("ok", opt_dialog)
+        #b1.move(50, 50)
+        opt_dialog = OptionDialog()
+        #opt_dialog.setGeometry(200, 200, 400, 200)
         opt_dialog.setWindowModality(Qt.ApplicationModal)
         opt_dialog.exec_()
-    
-    def changeTitle(self, state):      
+
+    def changeTitle(self, state):
         if state == Qt.Checked:
             pass
         pass
