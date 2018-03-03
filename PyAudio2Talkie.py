@@ -91,7 +91,7 @@ class Highlighter(QSyntaxHighlighter):
                 "\\bslots\\b", "\\bstatic\\b", "\\bstruct\\b",
                 "\\btemplate\\b", "\\btypedef\\b", "\\btypename\\b",
                 "\\bunion\\b", "\\bunsigned\\b", "\\bvirtual\\b", "\\bvoid\\b",
-                "\\bvolatile\\b"]
+                "\\bvolatile\\b", "\\bPROGMEM\\b"]
 
         self.highlightingRules = [(QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
@@ -113,6 +113,10 @@ class Highlighter(QSyntaxHighlighter):
         quotationFormat = QTextCharFormat()
         quotationFormat.setForeground(Qt.darkGreen)
         self.highlightingRules.append((QRegExp("\".*\""), quotationFormat))
+
+        talkieFormat = QTextCharFormat()
+        talkieFormat.setForeground(Qt.darkRed)
+        self.highlightingRules.append((QRegExp("Talkie"), talkieFormat))
 
         functionFormat = QTextCharFormat()
         functionFormat.setFontItalic(True)
@@ -157,8 +161,8 @@ class OptionDialog(QDialog):
     NumGridRows = 3
     NumButtons = 4
 
-    def __init__(self, parent):
-        super(OptionDialog, self).__init__()
+    def __init__(self, parent=None):
+        super(OptionDialog, self).__init__(parent)
 
         self.config_global = configparser.ConfigParser()      
         self.dir_name = os.path.dirname(os.path.realpath(__file__))
@@ -195,10 +199,9 @@ class OptionDialog(QDialog):
 
     def createThemesGroupBox(self):
         self.horizontalGroupBox = QGroupBox("Themes")
+        self.horizontalGroupBox.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)#disabled auto stretching
         layout = QHBoxLayout()
-
         self.originalPalette = QApplication.palette()
-        print (self.originalPalette)
 
         styleComboBox = QComboBox()
         styleComboBox.addItems(QStyleFactory.keys())
@@ -216,10 +219,16 @@ class OptionDialog(QDialog):
         self.gridGroupBox = QGroupBox("Ouput Preview")
         layout = QGridLayout()
 
-        
+        font = QFont()
+        font.setFamily('Courier')
+        font.setFixedPitch(True)
+        font.setPointSize(8)
+
         self.smallEditor = QTextEdit()
         self.smallEditor.setPlainText("Tarsier Preview")
         self.smallEditor.setReadOnly(True)
+        self.smallEditor.setFont(font)
+        self.highlighter = Highlighter(self.smallEditor.document())
 
         layout.addWidget(self.smallEditor, 0, 2, 4, 1)
 
@@ -229,6 +238,7 @@ class OptionDialog(QDialog):
 
     def createFormGroupBox(self):
         self.formGroupBox = QGroupBox("Output")
+        self.formGroupBox.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed) #disabled auto stretching
         layout = QFormLayout()
         self.cb = QComboBox()
         self.cb.addItem("Arduino Syntax -Full")
@@ -272,6 +282,7 @@ class PyTalkieWindow(QMainWindow):
         self.init_vars()
         self.init_config()
         self.init_vars()
+        self.init_editor()
         self.init_ui()
 
     def init_config(self):
@@ -306,14 +317,18 @@ class PyTalkieWindow(QMainWindow):
         self.geometry = ''
         self.theme = ''
 
-    def init_ui(self):
+    def init_editor(self):
+        font = QFont()
+        font.setFamily('Courier')
+        font.setFixedPitch(True)
+        font.setPointSize(8)
+
         self.textEdit = QTextEdit()
         self.setCentralWidget(self.textEdit)
-        self.textEdit.setText(" ")
-        self.font = QFont()
-        self.font.setFamily("Courier New")
-        self.textEdit.setFont(self.font)
+        self.textEdit.setFont(font)
+        self.highlighter = Highlighter(self.textEdit.document())
 
+    def init_ui(self):    
         self.menus = {}
         self.config_menus.read(self.menu_file)
         menubar = self.menuBar()
@@ -356,6 +371,8 @@ class PyTalkieWindow(QMainWindow):
         self.setWindowTitle('PyAudio-Talkie Synthesis')
         self.setWindowIcon(QIcon('images/convert.png'))
         QApplication.setStyle(QStyleFactory.create(self.theme))
+
+        self.set_details(self.new_wavFilename)
         self.show()
 
         pass
@@ -440,9 +457,13 @@ class PyTalkieWindow(QMainWindow):
             self.wavFile = self.get_audioName(filename)
             self.statusBar().showMessage(self.new_wavFilename)
             copyfile(fname[0], self.new_wavFilename)
-            file_details = "[Source Details]\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (filename, self.wavFile, folder,fname[0])
-            file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino..."
-            self.textEdit.setText(file_details)
+            self.set_details(fname[0])
+           
+    def set_details(self, full_filename):
+        folder, filename = os.path.split(full_filename)
+        file_details = "[Source Details]\n Size: %s\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
+        file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion"
+        self.textEdit.setText(file_details)
 
     def save(self):
         data = self.textEdit.toPlainText()
@@ -462,8 +483,9 @@ class PyTalkieWindow(QMainWindow):
         QApplication.sendEvent(clipboard, event)
 
     def option_dialog(self):
-        opt_dialog = OptionDialog()
+        opt_dialog = OptionDialog(self)
         opt_dialog.setWindowModality(Qt.ApplicationModal)
+        opt_dialog.resize(500,500)
         opt_dialog.exec_()
 
     def changeTitle(self, state):
