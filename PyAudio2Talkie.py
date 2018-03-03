@@ -88,6 +88,15 @@ class OptionDialog(QDialog):
     def __init__(self):
         super(OptionDialog, self).__init__()
 
+        self.config_global = configparser.ConfigParser()      
+        self.dir_name = os.path.dirname(os.path.realpath(__file__))
+        self.opts_preview = os.path.join(self.dir_name, "configs","preview")
+        self.global_file = os.path.join(self.dir_name, "configs/global.ini")
+        self.config_global.read(self.global_file)
+
+        self.output= self.config_global.get('global', 'output')
+        self.theme  = self.config_global.get('global', 'theme')
+        
         self.createThemesGroupBox()
         self.createFormGroupBox()
         self.createGridGroupBox()
@@ -106,17 +115,27 @@ class OptionDialog(QDialog):
         mainLayout.addWidget(buttonBox)
         self.setLayout(mainLayout)
 
+        #self.changeStyle('Windows')
         self.setWindowTitle("Options")
         self.setWindowIcon(QIcon('images/convert.png'))
+        self.selectionchange(self.output)
 
 
     def createThemesGroupBox(self):
         self.horizontalGroupBox = QGroupBox("Themes")
         layout = QHBoxLayout()
 
-        for i in range(OptionDialog.NumButtons):
-            button = QPushButton("Button %d" % (i + 1))
-            layout.addWidget(button)
+        self.originalPalette = QApplication.palette()
+
+        styleComboBox = QComboBox()
+        styleComboBox.addItems(QStyleFactory.keys())
+        styleComboBox.activated[str].connect(self.changeStyle)
+
+        styleLabel = QLabel("&Style:")
+        styleLabel.setBuddy(styleComboBox)
+        
+        layout.addWidget(styleLabel)
+        layout.addWidget(styleComboBox)
 
         self.horizontalGroupBox.setLayout(layout)
 
@@ -126,8 +145,8 @@ class OptionDialog(QDialog):
 
         
         self.smallEditor = QTextEdit()
-        self.smallEditor.setPlainText("This widget takes up about two thirds "
-                                      "of the grid layout.")
+        self.smallEditor.setPlainText("Tarsier Preview")
+        self.smallEditor.setReadOnly(True)
 
         layout.addWidget(self.smallEditor, 0, 2, 4, 1)
 
@@ -147,16 +166,30 @@ class OptionDialog(QDialog):
         self.formGroupBox.setLayout(layout)
 
     def selectionchange(self,i):
-        self.dir_name = os.path.dirname(os.path.realpath(__file__))
-        self.opts_preview = os.path.join(self.dir_name, "configs","preview")
+        self.output =str(i)
         self.opts_file = os.path.join(self.opts_preview, ("%s.txt" %i))
         if os.path.isfile(self.opts_file):
             f = open(self.opts_file, 'r')
             with f:
                 data = f.read()
                 self.smallEditor.setText(data)
+        self.save_config()
+        
 
-
+    def changeStyle(self, styleName):
+        self.theme = styleName
+        self.save_config()
+        QApplication.setStyle(QStyleFactory.create(styleName))
+        QApplication.setPalette(self.originalPalette)
+        
+    def save_config(self):        
+        self.config_global.set('global', 'theme', self.theme)
+        self.config_global.set('global', 'output', self.output)
+        # Writing our configuration file
+        with open(self.global_file, 'w') as configfile:
+            self.config_global.write(configfile)
+        pass
+        
 class PyTalkieWindow(QMainWindow):
 
     def __init__(self):
@@ -197,6 +230,7 @@ class PyTalkieWindow(QMainWindow):
         self.new_wavFilename = ''
         self.wavFile = ''
         self.geometry = ''
+        self.theme = ''
 
     def init_ui(self):
         self.textEdit = QTextEdit()
@@ -241,11 +275,13 @@ class PyTalkieWindow(QMainWindow):
         self.width = self.config_global.get('global', 'width')
         self.height = self.config_global.get('global', 'height')
         self.geometry = self.config_global.get('global', 'geometry')
+        self.theme = self.config_global.get('global', 'theme')
 
         self.statusBar()
         self.setGeometry(200, 200, int(self.width), int(self.height))
         self.setWindowTitle('PyAudio-Talkie Synthesis')
         self.setWindowIcon(QIcon('images/convert.png'))
+        QApplication.setStyle(QStyleFactory.create(self.theme))
         self.show()
 
         pass
