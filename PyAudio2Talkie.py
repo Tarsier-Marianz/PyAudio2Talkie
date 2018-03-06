@@ -9,6 +9,7 @@ from PyQt5.QtCore import *
 # QMainWindow, QTextEdit, QAction, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *  # QIcon, QFont
+from PyQt5 import QtPrintSupport
 import webbrowser
 try:
     import configparser
@@ -418,6 +419,12 @@ class PyTalkieWindow(QMainWindow):
         elif tag == 'about':
             self.about()
             pass
+        elif tag == 'print':
+            self.print()
+            pass
+        elif tag == 'preview':
+            self.print_preview()
+            pass
         elif tag == 'exit':
             self.close()
             pass
@@ -515,10 +522,16 @@ class PyTalkieWindow(QMainWindow):
         opt_dialog.exec_()
         self.reinit_configs()
 
-    def changeTitle(self, state):
-        if state == Qt.Checked:
-            pass
-        pass
+    def print(self):
+        dialog = QtPrintSupport.QPrintDialog()
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self.textEdit.document().print_(dialog.printer())
+
+    def print_preview(self):
+        dialog = QtPrintSupport.QPrintPreviewDialog()
+        dialog.setWindowIcon(QIcon('images/convert.png'))
+        dialog.paintRequested.connect(self.textEdit.print_)
+        dialog.exec_()
 
     def about(self):
         QMessageBox.about(self, "PyAudio-Talkie Synthesis",
