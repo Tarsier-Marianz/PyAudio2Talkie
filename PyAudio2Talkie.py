@@ -119,6 +119,10 @@ class Highlighter(QSyntaxHighlighter):
         quotationFormat.setForeground(Qt.darkGreen)
         self.highlightingRules.append((QRegExp("\".*\""), quotationFormat))
 
+        datatypeFormat = QTextCharFormat()
+        datatypeFormat.setForeground(Qt.darkGreen)
+        self.highlightingRules.append((QRegExp("uint8_t"), datatypeFormat))
+
         talkieFormat = QTextCharFormat()
         talkieFormat.setForeground(Qt.darkRed)
         self.highlightingRules.append((QRegExp("Talkie"), talkieFormat))
@@ -160,7 +164,6 @@ class Highlighter(QSyntaxHighlighter):
                     self.multiLineCommentFormat)
             startIndex = self.commentStartExpression.indexIn(text,
                     startIndex + commentLength)
-
 
 class OptionDialog(QDialog):
     NumGridRows = 3
@@ -472,8 +475,8 @@ class PyTalkieWindow(QMainWindow):
     def openo(self):
         self.statusBar().showMessage('Open Audio (WAV) files')
         fname = QFileDialog.getOpenFileName(
-            self, 'Open WAV File', self.lastOpenedFolder, "WAV files (*.wav)")
-        self.statusBar().showMessage('Open WAV File')
+            self, 'Open Audio File', self.lastOpenedFolder, "WAV files (*.wav);;All files (*.*)")
+        
         if fname[0]:
             self.open_file(fname[0])
             
@@ -504,9 +507,12 @@ class PyTalkieWindow(QMainWindow):
             self.statusBar().showMessage('Add extension to file name')
             fname = QFileDialog.getSaveFileName(self, 'Save File', self.lastOpenedFolder,"All Files (*);;Text Files (*.txt);;Arduino Sketch (*.ino)")
             if fname and os.path.isfile(fname[0]):
-                file = open(fname[0], 'w')
-                file.write(data)
-                file.close()
+                try:
+                    file = open(fname[0], 'w')
+                    file.write(data)
+                    file.close()
+                except:
+                    pass
 
     def copy(self):
         self.copiedtext = self.textEdit.toPlainText()
@@ -547,7 +553,6 @@ class PyTalkieWindow(QMainWindow):
                           "GUI based ( of <b>ArduinoTalkieSpeech-Py</b>) that convert audio <br>"
                           "file (WAV) to <b>Talkie</b> (speech synthesis for arduino) <br>"
                           "compatible data.")
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
