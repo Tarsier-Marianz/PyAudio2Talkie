@@ -523,15 +523,21 @@ class PyTalkieWindow(QMainWindow):
         self.reinit_configs()
 
     def print(self):
-        dialog = QtPrintSupport.QPrintDialog()
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            self.textEdit.document().print_(dialog.printer())
+        try:
+            dialog = QtPrintSupport.QPrintDialog()
+            if dialog.exec_() == QtWidgets.QDialog.Accepted:
+                self.textEdit.document().print_(dialog.printer())
+        except:
+            pass
 
     def print_preview(self):
-        dialog = QtPrintSupport.QPrintPreviewDialog()
-        dialog.setWindowIcon(QIcon('images/convert.png'))
-        dialog.paintRequested.connect(self.textEdit.print_)
-        dialog.exec_()
+        try:
+            dialog = QtPrintSupport.QPrintPreviewDialog()
+            dialog.setWindowIcon(QIcon('images/convert.png'))
+            dialog.paintRequested.connect(self.textEdit.print_)
+            dialog.exec_()
+        except:
+            pass
 
     def about(self):
         QMessageBox.about(self, "PyAudio-Talkie Synthesis",
