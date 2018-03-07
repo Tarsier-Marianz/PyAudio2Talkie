@@ -119,6 +119,14 @@ class Highlighter(QSyntaxHighlighter):
         quotationFormat.setForeground(Qt.darkGreen)
         self.highlightingRules.append((QRegExp("\".*\""), quotationFormat))
 
+        notesFormat = QTextCharFormat()
+        notesFormat.setForeground(Qt.red)
+        self.highlightingRules.append((QRegExp("^Note.+"), notesFormat))
+
+        labelFormat = QTextCharFormat()
+        labelFormat.setForeground(Qt.blue)
+        self.highlightingRules.append((QRegExp("\w+: "), labelFormat))
+
         datatypeFormat = QTextCharFormat()
         datatypeFormat.setForeground(Qt.darkGreen)
         self.highlightingRules.append((QRegExp("uint8_t"), datatypeFormat))
@@ -497,8 +505,8 @@ class PyTalkieWindow(QMainWindow):
     def set_details(self, full_filename):
         if os.path.isfile(full_filename):
             folder, filename = os.path.split(full_filename)
-            file_details = "[Source Details]\n Size: %s\n Filename: %s\n New Filename: %s\n Directory: %s\n Full Path: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
-            file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion"
+            file_details = "[Source Details]\n Size: %s\n Filename: %s\n NewFilename: %s\n Directory: %s\n FullPath: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
+            file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion."
             self.textEdit.setText(file_details)
 
     def save(self):
