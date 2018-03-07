@@ -8,11 +8,11 @@ const uint8_t spPreview[] PROGMEM = {
     0xF4,0x0F,0xCB,0x00,0xD0,...
 };
 
-setup(){
+void setup(){
     voice.say(spPreview);
 }
 
-void(){
+void loop(){
 
 }
 

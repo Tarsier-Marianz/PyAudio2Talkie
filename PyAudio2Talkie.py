@@ -39,7 +39,7 @@ class ConvertAudio(QThread):
 
     def get_output(self, code):
         if self.syntax =='0':
-            return "#include <Talkie.h>\n\nTalkie voice;\n\nconst uint8_t sp%s[] PROGMEM = {\n%s\n};\n\nsetup(){\n    voice.say(sp%s);\n}\nvoid(){\n}\n" % ( self.wav_file,code, self.wav_file)
+            return "#include <Talkie.h>\n\nTalkie voice;\n\nconst uint8_t sp%s[] PROGMEM = {\n%s\n};\n\nvoid setup(){\n    voice.say(sp%s);\n}\nvoid loop(){\n}\n" % ( self.wav_file,code, self.wav_file)
         elif self.syntax=='1':
             return "const uint8_t sp%s[] PROGMEM = {\n%s\n};" % (self.wav_file,code)
         else:
