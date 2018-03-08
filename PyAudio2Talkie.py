@@ -18,13 +18,16 @@ except:
 
 from shutil import copyfile
 
+def str2bool(v):
+  return str(v).lower() in ("yes", "true", "t", "1")
 
 class ConvertAudio(QThread):
     sec_signal = pyqtSignal(str)
 
-    def __init__(self, parent=None, audio_file='', wav_file='', syntax='0'):
+    def __init__(self, parent=None, audio_file='', wav_file='', syntax='0', wrap= True):
         super(ConvertAudio, self).__init__(parent)
         self.current_time = 0
+        self.wrap = wrap
         self.syntax = syntax
         self.audio_file = audio_file
         self.wav_file = wav_file[:-4]
@@ -53,18 +56,24 @@ class ConvertAudio(QThread):
             try:
                 # display code to text area
                 with open(self.audio_file, "rb") as f:
+                    index = 1
                     while True:
                         byte = f.read(1)
                         if not byte:
                             break
                         if self.is_version3:
                             #print ("%s0x%s," % ( code,(binascii.hexlify(byte)).decode("ascii").upper()))
-                            code = ("%s0x%s," % (
-                                code, (binascii.hexlify(byte)).decode("ascii").upper()))
+                            code = ("%s0x%s, " % (
+                                code, (binascii.hexlify(byte)).decode("ascii").strip().upper()))
                         else:
                             #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
-                            code = ("%s0x%s," %
-                                    (code, (binascii.hexlify(byte))))
+                            code = ("%s0x%s, " %
+                                    (code, (binascii.hexlify(byte)).strip().upper()))
+                        if self.wrap == True:
+                            if index >=16:
+                                code = code +"\n"
+                                index =0
+                            index = index+1
                     time.sleep(1)
                     self.sec_signal.emit(code)  # display code to text area
 
@@ -85,7 +94,8 @@ class Highlighter(QSyntaxHighlighter):
         super(Highlighter, self).__init__(parent)
 
         keywordFormat = QTextCharFormat()
-        keywordFormat.setForeground(Qt.darkBlue)
+        keywordFormat.setForeground(QColor(0, 151, 156))
+        #keywordFormat.setForeground(Qt.darkBlue)
         keywordFormat.setFontWeight(QFont.Bold)
 
         keywordPatterns = ["\\bchar\\b", "\\bclass\\b", "\\bconst\\b",
@@ -132,8 +142,12 @@ class Highlighter(QSyntaxHighlighter):
         self.highlightingRules.append((QRegExp("uint8_t"), datatypeFormat))
 
         talkieFormat = QTextCharFormat()
-        talkieFormat.setForeground(Qt.darkRed)
+        talkieFormat.setForeground(QColor(233, 115, 0))
         self.highlightingRules.append((QRegExp("Talkie"), talkieFormat))
+
+        includeFormat = QTextCharFormat()
+        includeFormat.setForeground(QColor(94, 109, 3))
+        self.highlightingRules.append((QRegExp("^#include"), includeFormat))
 
         functionFormat = QTextCharFormat()
         functionFormat.setFontItalic(True)
@@ -188,6 +202,7 @@ class OptionDialog(QDialog):
 
         self.output= self.config_global.get('global', 'output')
         self.theme  = self.config_global.get('global', 'theme')
+        self.wrap  = self.config_global.get('global', 'wrap')
         
         self.createThemesGroupBox()
         self.createGridGroupBox()
@@ -260,21 +275,30 @@ class OptionDialog(QDialog):
         self.cb.addItem("Arduino Syntax -Full")
         self.cb.addItem("Arduino Syntax -Declaration")
         self.cb.addItem("Plain Bytes")
-        self.cb.currentIndexChanged.connect(self.selectionchange)
-        self.cb.setCurrentIndex(int(self.output))
-        layout.addRow(QLabel("Formatting: "), self.cb)
+        self.cb.cuboxWrap.toggled.connect(self.check_changed)
+        layout.addRow(QLabel("Wrapping"), self.checkboxWrap)
+
         self.formGroupBox.setLayout(layout)
 
     def selectionchange(self,i):
         self.output =str(i)
         self.opts_file = os.path.join(self.opts_preview, ("%s.txt" %i))
         if os.path.isfile(self.opts_file):
-            f = open(self.opts_file, 'r')
+            f = open(self.opts_file, 'r')rrentIndexChanged.connect(self.selectionchange)
+        self.cb.setCurrentIndex(int(self.output))
+        layout.addRow(QLabel("Formatting: "), self.cb)
+        
+        self.checkboxWrap = QCheckBox("Newline created every 16 byte in converted output. ")
+        self.checkboxWrap.setChecked(str2bool(self.wrap))
+        self.check
             with f:
                 data = f.read()
                 self.smallEditor.setText(data)
         self.save_config()
         
+    def check_changed(self):
+        self.wrap = str(self.checkboxWrap.isChecked())
+        self.save_config()
 
     def changeStyle(self, styleName):
         self.theme = styleName
@@ -286,6 +310,7 @@ class OptionDialog(QDialog):
     def save_config(self):        
         self.config_global.set('global', 'theme', self.theme)
         self.config_global.set('global', 'output', self.output)
+        self.config_global.set('global', 'wrap', self.wrap)
         # Writing our configuration file
         with open(self.global_file, 'w') as configfile:
             self.config_global.write(configfile)
@@ -337,6 +362,7 @@ class PyTalkieWindow(QMainWindow):
         self.geometry = self.config_global.get('global', 'geometry')
         self.theme = self.config_global.get('global', 'theme')
         self.syntax = self.config_global.get('global', 'output')
+        self.wrap = self.config_global.get('global', 'wrap')
 
         self.open_file(self.source_wavFilename)
 
@@ -349,6 +375,7 @@ class PyTalkieWindow(QMainWindow):
         self.geometry = ''
         self.theme = ''
         self.syntax = ''
+        self.wrap = True
 
     def init_editor(self):
         font = QFont()
@@ -465,7 +492,7 @@ class PyTalkieWindow(QMainWindow):
             QApplication.setOverrideCursor(Qt.WaitCursor)
             self.is_loading = True
             self._converter = ConvertAudio(
-                audio_file=self.new_wavFilename, wav_file=self.wavFile, syntax=self.syntax)
+                audio_file=self.new_wavFilename, wav_file=self.wavFile, syntax=self.syntax, wrap= str2bool(self.wrap))
             self._converter.sec_signal.connect(self.textEdit.setText)
             self._converter.start()
             self._converter.wait()
@@ -505,7 +532,7 @@ class PyTalkieWindow(QMainWindow):
     def set_details(self, full_filename):
         if os.path.isfile(full_filename):
             folder, filename = os.path.split(full_filename)
-            file_details = "[Source Details]\n Size: %s\n Filename: %s\n NewFilename: %s\n Directory: %s\n FullPath: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename)
+            file_details = "[Source Details]\n Size: %s\n Filename: %s\n NewFilename: %s\n Directory: %s\n FullPath: %s\n WrapOutput: %s\n" % (os.path.getsize(full_filename),filename, self.wavFile, folder,full_filename,self.wrap)
             file_details += "\nClick Convert to generate Talkie speech compatible data for Arduino...\n\nNote: the bigger file size of audio file, the longer it takes to execute conversion."
             self.textEdit.setText(file_details)
 
