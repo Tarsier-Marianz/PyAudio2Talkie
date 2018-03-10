@@ -193,17 +193,7 @@ class OptionDialog(QDialog):
 
     def __init__(self, parent=None):
         super(OptionDialog, self).__init__(parent)
-
-        self.config_global = configparser.ConfigParser()      
-        self.dir_name = os.path.dirname(os.path.realpath(__file__))
-        self.opts_preview = os.path.join(self.dir_name, "configs","preview")
-        self.global_file = os.path.join(self.dir_name, "configs/global.ini")
-        self.config_global.read(self.global_file)
-
-        self.output= self.config_global.get('global', 'output')
-        self.theme  = self.config_global.get('global', 'theme')
-        self.wrap  = self.config_global.get('global', 'wrap')
-        
+        self.init_variables()
         self.createThemesGroupBox()
         self.createGridGroupBox()
         self.createFormGroupBox()
@@ -227,6 +217,19 @@ class OptionDialog(QDialog):
         self.setWindowIcon(QIcon('images/convert.png'))
         self.selectionchange(self.output)
 
+    def init_variables(self):
+        self.output_formats = ["Arduino Syntax -Full","Arduino Syntax -Declaration","Plain Bytes"]
+
+        self.config_global = configparser.ConfigParser()      
+        self.dir_name = os.path.dirname(os.path.realpath(__file__))
+        self.opts_preview = os.path.join(self.dir_name, "configs","preview")
+        self.global_file = os.path.join(self.dir_name, "configs/global.ini")
+        self.config_global.read(self.global_file)
+
+        self.output= self.config_global.get('global', 'output')
+        self.theme  = self.config_global.get('global', 'theme')
+        self.wrap  = self.config_global.get('global', 'wrap')
+        
 
     def createThemesGroupBox(self):
         self.horizontalGroupBox = QGroupBox("Themes")
@@ -236,6 +239,7 @@ class OptionDialog(QDialog):
 
         styleComboBox = QComboBox()
         styleComboBox.addItems(QStyleFactory.keys())
+        styleComboBox.setCurrentIndex(styleComboBox.findText(self.theme))
         styleComboBox.activated[str].connect(self.changeStyle)
 
         styleLabel = QLabel("&Style:")
@@ -272,10 +276,15 @@ class OptionDialog(QDialog):
         self.formGroupBox.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed) #disabled auto stretching
         layout = QFormLayout()
         self.cb = QComboBox()
-        self.cb.addItem("Arduino Syntax -Full")
-        self.cb.addItem("Arduino Syntax -Declaration")
-        self.cb.addItem("Plain Bytes")
-        self.cb.cuboxWrap.toggled.connect(self.check_changed)
+        for f in self.output_formats:
+            self.cb.addItem(f)
+        self.cb.currentIndexChanged.connect(self.selectionchange)
+        self.cb.setCurrentIndex(int(self.output))
+        layout.addRow(QLabel("Formatting: "), self.cb)
+        
+        self.checkboxWrap = QCheckBox("Newline created every 16 byte in converted output. ")
+        self.checkboxWrap.setChecked(str2bool(self.wrap))
+        self.checkboxWrap.toggled.connect(self.check_changed)
         layout.addRow(QLabel("Wrapping"), self.checkboxWrap)
 
         self.formGroupBox.setLayout(layout)
@@ -284,13 +293,7 @@ class OptionDialog(QDialog):
         self.output =str(i)
         self.opts_file = os.path.join(self.opts_preview, ("%s.txt" %i))
         if os.path.isfile(self.opts_file):
-            f = open(self.opts_file, 'r')rrentIndexChanged.connect(self.selectionchange)
-        self.cb.setCurrentIndex(int(self.output))
-        layout.addRow(QLabel("Formatting: "), self.cb)
-        
-        self.checkboxWrap = QCheckBox("Newline created every 16 byte in converted output. ")
-        self.checkboxWrap.setChecked(str2bool(self.wrap))
-        self.check
+            f = open(self.opts_file, 'r')
             with f:
                 data = f.read()
                 self.smallEditor.setText(data)
