@@ -613,5 +613,28 @@ if __name__ == '__main__':
     palette.setColor(QPalette.HighlightedText, Qt.black)
     app.setPalette(palette)
     '''
+
+    # create splashscreen, use the pic in folder img/bee2.jpg
+    splash_pix = QPixmap('images/splash.png')
+    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+    # set the splash window flag, keep the window stay on tophint and frameless
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setEnabled(False)
+    #splash.setMask(splash_pix.mask())
+    # show the splashscreen
+    splash.show()
+    # show Message
+    #splash.showMessage("<h1><font color='green'>Welcome BeeMan!</font></h1>", Qt.AlignTop | Qt.AlignCenter, Qt.black)
+
+    # create elapse timer to cal time
+    timer = QElapsedTimer()
+    timer.start()
+    # we give 3 secs
+    while timer.elapsed() < 3000 :
+        app.processEvents()
+
     pywin = PyTalkieWindow()
+
+     # call finish method to destory the splashscreen
+    splash.finish(pywin)
     sys.exit(app.exec_())
