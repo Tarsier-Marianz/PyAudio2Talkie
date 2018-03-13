@@ -24,10 +24,11 @@ def str2bool(v):
 class ConvertAudio(QThread):
     sec_signal = pyqtSignal(str)
 
-    def __init__(self, parent=None, audio_file='', wav_file='', syntax='0', wrap= True):
+    def __init__(self, parent=None, audio_file='', wav_file='', syntax='0', wrap= True, is_bin= False):
         super(ConvertAudio, self).__init__(parent)
         self.current_time = 0
         self.wrap = wrap
+        self.is_bin = is_bin
         self.syntax = syntax
         self.audio_file = audio_file
         self.wav_file = wav_file[:-4]
@@ -61,14 +62,20 @@ class ConvertAudio(QThread):
                         byte = f.read(1)
                         if not byte:
                             break
-                        if self.is_version3:
-                            #print ("%s0x%s," % ( code,(binascii.hexlify(byte)).decode("ascii").upper()))
-                            code = ("%s0x%s, " % (
-                                code, (binascii.hexlify(byte)).decode("ascii").strip().upper()))
+                        if self.is_bin == False:
+                            #Python version affects bytes conversion
+                            # in python3 we must decode converted byte to avoid exception
+                            if self.is_version3:
+                                #print ("%s0x%s," % ( code,(binascii.hexlify(byte)).decode("ascii").upper()))
+                                code = ("%s0x%s, " % (code, (binascii.hexlify(byte)).decode("ascii").strip().upper()))
+                            else:
+                                #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
+                                code = ("%s0x%s, " % (code, (binascii.hexlify(byte)).strip().upper()))
                         else:
-                            #print ("%s0x%s," % (code,(binascii.hexlify(byte))))
-                            code = ("%s0x%s, " %
-                                    (code, (binascii.hexlify(byte)).strip().upper()))
+                            bint = ord(byte) #get byte integer value
+                            code = ("%s%s, " % (code, "{0:08b}".format(bint))) #convert int value to bits binary
+                        
+
                         if self.wrap == True:
                             if index >=16:
                                 code = code +"\n"
@@ -79,7 +86,7 @@ class ConvertAudio(QThread):
 
             except Exception as ex:
                 self.sec_signal.emit(str(ex))  # display code to text area
-                print(ex)
+                print("Exception: %s" % ex)
             finally:
                 f.close()
                 code = code[:-1]
@@ -229,6 +236,7 @@ class OptionDialog(QDialog):
         self.output= self.config_global.get('global', 'output')
         self.theme  = self.config_global.get('global', 'theme')
         self.wrap  = self.config_global.get('global', 'wrap')
+        self.is_bin  = self.config_global.get('global', 'binary')
         
 
     def createThemesGroupBox(self):
@@ -286,6 +294,11 @@ class OptionDialog(QDialog):
         self.checkboxWrap.setChecked(str2bool(self.wrap))
         self.checkboxWrap.toggled.connect(self.check_changed)
         layout.addRow(QLabel("Wrapping"), self.checkboxWrap)
+        
+        self.checkboxBinary = QCheckBox("Check if you want Binary output type in byte conversion otherwise default Hex.")
+        self.checkboxBinary.setChecked(str2bool(self.is_bin))
+        self.checkboxBinary.toggled.connect(self.check_changed)
+        layout.addRow(QLabel("Type"), self.checkboxBinary)
 
         self.formGroupBox.setLayout(layout)
 
@@ -301,6 +314,7 @@ class OptionDialog(QDialog):
         
     def check_changed(self):
         self.wrap = str(self.checkboxWrap.isChecked())
+        self.is_bin = str(self.checkboxBinary.isChecked())
         self.save_config()
 
     def changeStyle(self, styleName):
@@ -314,6 +328,7 @@ class OptionDialog(QDialog):
         self.config_global.set('global', 'theme', self.theme)
         self.config_global.set('global', 'output', self.output)
         self.config_global.set('global', 'wrap', self.wrap)
+        self.config_global.set('global', 'binary', self.is_bin)
         # Writing our configuration file
         with open(self.global_file, 'w') as configfile:
             self.config_global.write(configfile)
@@ -366,6 +381,7 @@ class PyTalkieWindow(QMainWindow):
         self.theme = self.config_global.get('global', 'theme')
         self.syntax = self.config_global.get('global', 'output')
         self.wrap = self.config_global.get('global', 'wrap')
+        self.is_bin = self.config_global.get('global', 'binary')
 
         self.open_file(self.source_wavFilename)
 
@@ -495,7 +511,7 @@ class PyTalkieWindow(QMainWindow):
             QApplication.setOverrideCursor(Qt.WaitCursor)
             self.is_loading = True
             self._converter = ConvertAudio(
-                audio_file=self.new_wavFilename, wav_file=self.wavFile, syntax=self.syntax, wrap= str2bool(self.wrap))
+                audio_file=self.new_wavFilename, wav_file=self.wavFile, syntax=self.syntax, wrap= str2bool(self.wrap), is_bin=str2bool(self.is_bin))
             self._converter.sec_signal.connect(self.textEdit.setText)
             self._converter.start()
             self._converter.wait()
