@@ -32,11 +32,13 @@ class ConvertAudio(QThread):
         self.syntax = syntax
         self.audio_file = audio_file
         self.wav_file = wav_file[:-4]
-
+        self.newline_bit = 16
         self.is_version3 = False
         if (sys.version_info > (3, 0)):
             # Python 3 code in this block
             self.is_version3 = True
+        if self.is_bin == True:
+            self.newline_bit = 8
 
     def __del__(self):
         self.wait()
@@ -63,7 +65,7 @@ class ConvertAudio(QThread):
                         if not byte:
                             break
                         if self.is_bin == False:
-                            #Python version affects bytes conversion
+                            # Python version affects bytes conversion
                             # in python3 we must decode converted byte to avoid exception
                             if self.is_version3:
                                 #print ("%s0x%s," % ( code,(binascii.hexlify(byte)).decode("ascii").upper()))
@@ -77,7 +79,7 @@ class ConvertAudio(QThread):
                         
 
                         if self.wrap == True:
-                            if index >=16:
+                            if index >= self.newline_bit:
                                 code = code +"\n"
                                 index =0
                             index = index+1
