@@ -4,12 +4,10 @@ import re
 import binascii
 import time
 from threading import Thread
-# QFile, QFileInfo, QSettings, Qt, QTextStream, QTimer, QThread, pyqtSignal
-from PyQt5.QtCore import *
-# QMainWindow, QTextEdit, QAction, QApplication, QMessageBox, QFileDialog
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *  # QIcon, QFont
-from PyQt5 import QtPrintSupport
+from PyQt5.QtCore import QFile, QFileInfo, QSettings, Qt, QTextStream, QTimer, QThread, QRegExp, QElapsedTimer,QEvent, pyqtSignal 
+from PyQt5.QtWidgets import QStyleFactory,QSizePolicy, QMainWindow, QTextEdit, QAction, QApplication, QMessageBox, QFileDialog, QDialog, QCheckBox, QLabel, QComboBox,QGroupBox,QHBoxLayout, QGridLayout,QFormLayout,QVBoxLayout,QDialogButtonBox, QSplashScreen
+from PyQt5.QtGui import  QIcon, QPixmap, QFont, QColor, QTextCharFormat, QSyntaxHighlighter
+from PyQt5.QtPrintSupport import QPrintPreviewDialog, QPrintDialog
 import webbrowser
 try:
     import configparser
@@ -586,15 +584,15 @@ class PyTalkieWindow(QMainWindow):
 
     def print(self):
         try:
-            dialog = QtPrintSupport.QPrintDialog()
-            if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            dialog = QPrintDialog()
+            if dialog.exec_() == QDialog.Accepted:
                 self.textEdit.document().print_(dialog.printer())
         except:
             pass
 
     def print_preview(self):
         try:
-            dialog = QtPrintSupport.QPrintPreviewDialog()
+            dialog = QPrintPreviewDialog()
             dialog.setWindowIcon(QIcon('images/convert.png'))
             dialog.paintRequested.connect(self.textEdit.print_)
             dialog.exec_()
@@ -602,9 +600,9 @@ class PyTalkieWindow(QMainWindow):
             pass
 
     def about(self):
-        QMessageBox.about(self, "PyAudio-Talkie Synthesis",
+        QMessageBox.about(self, "About PyAudio-Talkie Synthesis",
                           "<b>PyAudio-Talkie Synthesis</b><br>"
-                          "Version: <b>1.0.5801.98001</b><br><br>"
+                          "Version: <b>1.1.8101.99616</b><br><br>"
                           "Copyright  © <b> Tarsier 2018</b><br><br>"
                           "GUI based ( of <b>ArduinoTalkieSpeech-Py</b>) that convert audio <br>"
                           "file (WAV) to <b>Talkie</b> (speech synthesis for arduino) <br>"
