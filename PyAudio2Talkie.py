@@ -142,7 +142,7 @@ class Highlighter(QSyntaxHighlighter):
 
         labelFormat = QTextCharFormat()
         labelFormat.setForeground(Qt.blue)
-        self.highlightingRules.append((QRegExp("\w+: "), labelFormat))
+        self.highlightingRules.append((QRegExp(r"\w+: "), labelFormat))
 
         datatypeFormat = QTextCharFormat()
         datatypeFormat.setForeground(Qt.darkGreen)
@@ -639,8 +639,6 @@ if __name__ == '__main__':
     #splash.setMask(splash_pix.mask())
     # show the splashscreen
     splash.show()
-    # show Message
-    #splash.showMessage("<h1><font color='green'>Welcome BeeMan!</font></h1>", Qt.AlignTop | Qt.AlignCenter, Qt.black)
 
     # create elapse timer to cal time
     timer = QElapsedTimer()
